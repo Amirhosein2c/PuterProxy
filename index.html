@@ -49,7 +49,7 @@
                 .catch(error => {
                     document.getElementById('result').innerHTML = JSON.stringify({
                         success: false,
-                        error: error.message || 'Unknown error',
+                        error: error.message,
                         prompt: prompt,
                         imageUrl: imageUrl,
                         model: model
