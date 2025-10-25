@@ -24,19 +24,41 @@
     </style>
 </head>
 <body>
-    <div id="result" class="loading">⏳ Processing your request... Please wait up to 60 seconds...</div>
+    <div id="result" class="loading">⏳ Initializing... Waiting for request data...</div>
     
     <script src="https://js.puter.com/v2/"></script>
     <script>
+        // Function to get data from URL hash (for POST-like behavior)
+        function getDataFromHash() {
+            const hash = window.location.hash.substring(1); // Remove #
+            if (hash) {
+                try {
+                    return JSON.parse(decodeURIComponent(hash));
+                } catch (e) {
+                    return null;
+                }
+            }
+            return null;
+        }
+        
         // Async function to handle the AI request
         async function processRequest() {
             try {
-                // Get parameters from URL
-                const params = new URLSearchParams(window.location.search);
-                const prompt = params.get('prompt') || 'What do you see in this image?';
-                const imageUrl = params.get('imageUrl');
-                const model = params.get('model') || 'gpt-5';
-                const timeoutSeconds = parseInt(params.get('timeout')) || 60;
+                // Try to get data from hash first (for POST-like requests)
+                let data = getDataFromHash();
+                
+                // Fallback to URL parameters (for GET requests)
+                if (!data) {
+                    const params = new URLSearchParams(window.location.search);
+                    data = {
+                        prompt: params.get('prompt') || 'What do you see in this image?',
+                        imageUrl: params.get('imageUrl'),
+                        model: params.get('model') || 'qwen/qwen3-14b',
+                        timeout: parseInt(params.get('timeout')) || 60
+                    };
+                }
+                
+                const { prompt, imageUrl, model, timeout = 60 } = data;
                 
                 // Validate inputs
                 if (!imageUrl) {
@@ -45,12 +67,12 @@
                 
                 // Update status
                 document.getElementById('result').innerHTML = 
-                    `⏳ Analyzing image with ${model}...\n\nPrompt: ${prompt}\nImage: ${imageUrl}\n\nPlease wait...`;
+                    `⏳ Analyzing image with ${model}...\n\nPrompt: ${prompt}\nImage URL length: ${imageUrl.length} characters\n\nPlease wait up to ${timeout} seconds...`;
                 
                 // Create a timeout promise
                 const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error(`Request timed out after ${timeoutSeconds} seconds`)), 
-                               timeoutSeconds * 1000);
+                    setTimeout(() => reject(new Error(`Request timed out after ${timeout} seconds`)), 
+                               timeout * 1000);
                 });
                 
                 // Create the AI request promise
@@ -64,7 +86,7 @@
                 document.getElementById('result').innerHTML = JSON.stringify({
                     success: true,
                     prompt: prompt,
-                    imageUrl: imageUrl,
+                    imageUrl: imageUrl.substring(0, 100) + '...', // Truncate for display
                     model: model,
                     response: response,
                     timestamp: new Date().toISOString()
@@ -77,89 +99,13 @@
                     success: false,
                     error: error.message || 'Unknown error occurred',
                     errorDetails: error.toString(),
-                    prompt: params.get('prompt'),
-                    imageUrl: params.get('imageUrl'),
-                    model: params.get('model') || 'gpt-5',
                     timestamp: new Date().toISOString()
                 }, null, 2);
             }
         }
         
         // Run the async function when page loads
-        processRequest();
+        window.addEventListener('load', processRequest);
     </script>
 </body>
 </html>
-
-
-    
-<!-- <script src="https://js.puter.com/v2/"></script>
-    <script>
-        async function streamResponse() {
-            const response = await puter.ai.chat(
-                "Explain quantum computing in detail", 
-                { model: "qwen/qwen3-235b-a22b", stream: true }
-            );
-            
-            for await (const part of response) {
-                puter.print(part?.text);
-            }
-        }
-
-        streamResponse();
-    </script> -->
-
-
-
-
-
-
-
-<!-- 
-    
-    <html>
-<body>
-    <div style="max-width: 800px; margin: 20px auto; font-family: Arial, sans-serif;">
-        <h1>OpenRouter Model Explorer</h1>
-        <select id="model-select" style="padding: 8px; margin-bottom: 10px;">
-            <option value="openrouter:meta-llama/llama-3.1-8b-instruct">Meta Llama 3.1 (8B)</option>
-            <option value="openrouter:anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
-            <option value="openrouter:mistralai/mistral-7b-instruct">Mistral 7B</option>
-            <option value="openrouter:google/gemini-pro-1.5">Google Gemini Pro 1.5</option>
-            <option value="openrouter:openai/gpt-4o-mini">OpenAI GPT-4o Mini</option>
-        </select>
-        <textarea id="prompt" rows="4" style="width: 100%; padding: 8px; margin-bottom: 10px;" 
-            placeholder="Enter your prompt here...">Explain how solar panels work.</textarea>
-        <button id="generate" style="padding: 8px 16px;">Generate</button>
-        <div id="loading" style="display: none; margin-top: 10px;">Generating response...</div>
-        <div id="response" style="margin-top: 20px; padding: 15px; border: 1px solid #ddd; 
-            border-radius: 5px; min-height: 200px;"></div>
-    </div>
-
-    <script src="https://js.puter.com/v2/"></script>
-    <script>
-        document.getElementById('generate').addEventListener('click', async () => {
-            const modelSelect = document.getElementById('model-select');
-            const promptInput = document.getElementById('prompt');
-            const responseDiv = document.getElementById('response');
-            const loadingDiv = document.getElementById('loading');
-            
-            const selectedModel = modelSelect.value;
-            const prompt = promptInput.value;
-            
-            if (!prompt) return;
-            
-            responseDiv.innerHTML = '';
-            loadingDiv.style.display = 'block';
-            
-            try {
-                const response = await puter.ai.chat(prompt, {model: selectedModel});
-                responseDiv.innerHTML = response;
-            } catch (error) {
-                responseDiv.innerHTML = `Error: ${error.message}`;
-            } finally {
-                loadingDiv.style.display = 'none';
-            }
-        });
-    </script> -->
-
