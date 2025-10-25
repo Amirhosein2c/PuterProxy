@@ -19,7 +19,7 @@
 <body>
     <div id="result">⏳ Processing your request...</div>
     
-    <script src="https://js.puter.com/v2/"></script>
+    <!-- <script src="https://js.puter.com/v2/"></script>
     <script>
         // Get parameters from URL
         const params = new URLSearchParams(window.location.search);
@@ -56,6 +56,18 @@
                     }, null, 2);
                 });
         }
+    </script> -->
+
+<script src="https://js.puter.com/v2/"></script>
+    <script>
+        puter.ai.chat(
+            "What do you see in this image?",
+            "https://assets.puter.site/doge.jpeg",
+            { model: 'qwen/qwen3-14b' }
+        ).then(response => {
+            document.write(response);
+        });
     </script>
+    
 </body>
 </html>
