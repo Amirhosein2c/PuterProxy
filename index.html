@@ -60,13 +60,18 @@
 
 <script src="https://js.puter.com/v2/"></script>
     <script>
-        puter.ai.chat(
-            "What do you see in this image?",
-            "https://assets.puter.site/doge.jpeg",
-            { model: 'qwen/qwen3-14b' }
-        ).then(response => {
-            document.write(response);
-        });
+        async function streamResponse() {
+            const response = await puter.ai.chat(
+                "Explain quantum computing in detail", 
+                { model: "qwen/qwen3-235b-a22b", stream: true }
+            );
+            
+            for await (const part of response) {
+                puter.print(part?.text);
+            }
+        }
+
+        streamResponse();
     </script>
     
 </body>
