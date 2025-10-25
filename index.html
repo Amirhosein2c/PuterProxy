@@ -14,49 +14,82 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
+        .loading {
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
     </style>
 </head>
 <body>
-    <div id="result">⏳ Processing your request...</div>
+    <div id="result" class="loading">⏳ Processing your request... Please wait up to 60 seconds...</div>
     
     <script src="https://js.puter.com/v2/"></script>
     <script>
-        // Get parameters from URL
-        const params = new URLSearchParams(window.location.search);
-        const prompt = params.get('prompt') || 'What do you see in this image?';
-        const imageUrl = params.get('imageUrl');
-        const model = params.get('model') || 'openrouter:qwen/qwen2.5-vl-72b-instruct:free';
-        
-        // Validate inputs
-        if (!imageUrl) {
-            document.getElementById('result').innerHTML = JSON.stringify({
-                success: false,
-                error: 'Missing imageUrl parameter'
-            }, null, 2);
-        } else {
-            // Call Puter AI
-            puter.ai.chat(prompt, imageUrl, { model })
-                .then(response => {
-                    // Output as JSON for n8n to parse
-                    document.getElementById('result').innerHTML = JSON.stringify({
-                        success: true,
-                        prompt: prompt,
-                        imageUrl: imageUrl,
-                        model: model,
-                        response: response
-                    }, null, 2);
-                })
-                .catch(error => {
-                    document.getElementById('result').innerHTML = JSON.stringify({
-                        success: false,
-                        error: error.message,
-                        prompt: prompt,
-                        imageUrl: imageUrl,
-                        model: model
-                    }, null, 2);
+        // Async function to handle the AI request
+        async function processRequest() {
+            try {
+                // Get parameters from URL
+                const params = new URLSearchParams(window.location.search);
+                const prompt = params.get('prompt') || 'What do you see in this image?';
+                const imageUrl = params.get('imageUrl');
+                const model = params.get('model') || 'openrouter:qwen/qwen2.5-vl-72b-instruct:free';
+                const timeoutSeconds = parseInt(params.get('timeout')) || 60;
+                
+                // Validate inputs
+                if (!imageUrl) {
+                    throw new Error('Missing imageUrl parameter');
+                }
+                
+                // Update status
+                document.getElementById('result').innerHTML = 
+                    `⏳ Analyzing image with ${model}...\n\nPrompt: ${prompt}\nImage: ${imageUrl}\n\nPlease wait...`;
+                
+                // Create a timeout promise
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error(`Request timed out after ${timeoutSeconds} seconds`)), 
+                               timeoutSeconds * 1000);
                 });
+                
+                // Create the AI request promise
+                const aiPromise = puter.ai.chat(prompt, imageUrl, { model });
+                
+                // Race between AI response and timeout
+                const response = await Promise.race([aiPromise, timeoutPromise]);
+                
+                // Success! Remove loading class and display result
+                document.getElementById('result').classList.remove('loading');
+                document.getElementById('result').innerHTML = JSON.stringify({
+                    success: true,
+                    prompt: prompt,
+                    imageUrl: imageUrl,
+                    model: model,
+                    response: response,
+                    timestamp: new Date().toISOString()
+                }, null, 2);
+                
+            } catch (error) {
+                // Error handling
+                document.getElementById('result').classList.remove('loading');
+                document.getElementById('result').innerHTML = JSON.stringify({
+                    success: false,
+                    error: error.message || 'Unknown error occurred',
+                    errorDetails: error.toString(),
+                    prompt: params.get('prompt'),
+                    imageUrl: params.get('imageUrl'),
+                    model: params.get('model') || 'qwen/qwen3-14b',
+                    timestamp: new Date().toISOString()
+                }, null, 2);
+            }
         }
+        
+        // Run the async function when page loads
+        processRequest();
     </script>
+</body>
+</html>
 
 
     
@@ -130,9 +163,3 @@
         });
     </script> -->
 
-    
-</body>
-</html>
-    
-</body>
-</html>
