@@ -24,41 +24,38 @@
     </style>
 </head>
 <body>
-    <div id="result" class="loading">⏳ Initializing... Waiting for request data...</div>
+    <div id="result" class="loading">⏳ Initializing...</div>
     
     <script src="https://js.puter.com/v2/"></script>
     <script>
-        // Function to get data from URL hash (for POST-like behavior)
-        function getDataFromHash() {
-            const hash = window.location.hash.substring(1); // Remove #
-            if (hash) {
-                try {
-                    return JSON.parse(decodeURIComponent(hash));
-                } catch (e) {
-                    return null;
-                }
-            }
-            return null;
-        }
-        
         // Async function to handle the AI request
         async function processRequest() {
             try {
-                // Try to get data from hash first (for POST-like requests)
-                let data = getDataFromHash();
+                // Get parameters from URL query string
+                const params = new URLSearchParams(window.location.search);
                 
-                // Fallback to URL parameters (for GET requests)
-                if (!data) {
-                    const params = new URLSearchParams(window.location.search);
-                    data = {
-                        prompt: params.get('prompt') || 'What do you see in this image?',
-                        imageUrl: params.get('imageUrl'),
-                        model: params.get('model') || 'qwen/qwen3-14b',
-                        timeout: parseInt(params.get('timeout')) || 60
-                    };
+                // Check if we have base64 encoded data
+                const encodedData = params.get('data');
+                let prompt, imageUrl, model, timeout;
+                
+                if (encodedData) {
+                    // Decode base64 data
+                    try {
+                        const decodedData = JSON.parse(atob(encodedData));
+                        prompt = decodedData.prompt;
+                        imageUrl = decodedData.imageUrl;
+                        model = decodedData.model || 'gpt-5';
+                        timeout = decodedData.timeout || 90;
+                    } catch (e) {
+                        throw new Error('Failed to decode data parameter: ' + e.message);
+                    }
+                } else {
+                    // Fallback to individual parameters (for short requests)
+                    prompt = params.get('prompt') || 'What do you see in this image?';
+                    imageUrl = params.get('imageUrl');
+                    model = params.get('model') || 'gpt-5';
+                    timeout = parseInt(params.get('timeout')) || 90;
                 }
-                
-                const { prompt, imageUrl, model, timeout = 60 } = data;
                 
                 // Validate inputs
                 if (!imageUrl) {
@@ -67,7 +64,7 @@
                 
                 // Update status
                 document.getElementById('result').innerHTML = 
-                    `⏳ Analyzing image with ${model}...\n\nPrompt: ${prompt}\nImage URL length: ${imageUrl.length} characters\n\nPlease wait up to ${timeout} seconds...`;
+                    `⏳ Analyzing image with ${model}...\n\nPrompt length: ${prompt.length} characters\nImage URL length: ${imageUrl.length} characters\n\nPlease wait up to ${timeout} seconds...`;
                 
                 // Create a timeout promise
                 const timeoutPromise = new Promise((_, reject) => {
@@ -85,10 +82,8 @@
                 document.getElementById('result').classList.remove('loading');
                 document.getElementById('result').innerHTML = JSON.stringify({
                     success: true,
-                    prompt: prompt,
-                    imageUrl: imageUrl.substring(0, 100) + '...', // Truncate for display
-                    model: model,
                     response: response,
+                    model: model,
                     timestamp: new Date().toISOString()
                 }, null, 2);
                 
